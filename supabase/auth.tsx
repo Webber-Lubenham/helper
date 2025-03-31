@@ -36,6 +36,15 @@ type AuthContextType = {
     phone: string,
     address: string,
   ) => Promise<void>;
+  inviteStudent: (
+    email: string,
+    fullName: string,
+    birthDate: string,
+  ) => Promise<{ invitationToken: string; temporaryPassword: string }>;
+  acceptStudentInvitation: (
+    invitationToken: string,
+    password: string,
+  ) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -44,7 +53,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function AuthProvider({ children }: { children: React.ReactNode }) {
+// Using a named function declaration for consistent component exports
+const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -271,6 +281,117 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     return data.user_type as UserType;
   };
 
+  // Generate a random password of specified length
+  const generateRandomPassword = (length = 10) => {
+    const charset =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * charset.length);
+      password += charset[randomIndex];
+    }
+    return password;
+  };
+
+  // Generate a unique invitation token
+  const generateInvitationToken = () => {
+    return crypto.randomUUID();
+  };
+
+  // Invite a student and generate credentials
+  const inviteStudent = async (
+    email: string,
+    fullName: string,
+    birthDate: string,
+  ) => {
+    if (!user) throw new Error("You must be logged in to invite a student");
+
+    // Check if the current user is a guardian
+    const userType = await getUserType();
+    if (userType !== "guardian") {
+      throw new Error("Only guardians can invite students");
+    }
+
+    // Generate temporary password and invitation token
+    const temporaryPassword = generateRandomPassword();
+    const invitationToken = generateInvitationToken();
+
+    // Set expiration date (7 days from now)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    // Store invitation in the database
+    const { error } = await supabase.from("student_invitations").insert({
+      guardian_id: user.id,
+      email,
+      full_name: fullName,
+      birth_date: birthDate,
+      temporary_password: temporaryPassword,
+      invitation_token: invitationToken,
+      expires_at: expiresAt.toISOString(),
+    });
+
+    if (error) throw error;
+
+    return { invitationToken, temporaryPassword };
+  };
+
+  // Accept a student invitation
+  const acceptStudentInvitation = async (
+    invitationToken: string,
+    password: string,
+  ) => {
+    // Get the invitation details
+    const { data: invitation, error: invitationError } = await supabase
+      .from("student_invitations")
+      .select("*")
+      .eq("invitation_token", invitationToken)
+      .eq("accepted", false)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (invitationError || !invitation) {
+      throw new Error("Convite inválido ou expirado");
+    }
+
+    // Create the student account
+    const { data, error } = await supabase.auth.signUp({
+      email: invitation.email,
+      password,
+      options: {
+        data: {
+          full_name: invitation.full_name,
+          user_type: "student",
+        },
+      },
+    });
+
+    if (error) throw error;
+
+    if (data.user) {
+      // Create student profile
+      await createProfile(data.user.id, "student", {
+        fullName: invitation.full_name,
+        birthDate: invitation.birth_date,
+      });
+
+      // Mark invitation as accepted
+      await supabase
+        .from("student_invitations")
+        .update({
+          accepted: true,
+          accepted_at: new Date().toISOString(),
+        })
+        .eq("invitation_token", invitationToken);
+
+      // Create guardian-student relationship
+      await supabase.from("guardian_students").insert({
+        guardian_id: invitation.guardian_id,
+        student_id: data.user.id,
+      });
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -281,6 +402,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         signUpStudent,
         signUpGuardian,
         signUpInstitution,
+        inviteStudent,
+        acceptStudentInvitation,
         resetPassword,
         updatePassword,
         signOut,
@@ -290,14 +413,16 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-function useAuth() {
+// Define useAuth as a constant function
+const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
+};
 
+// Export the components and hooks
 export { AuthProvider, useAuth };

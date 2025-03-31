@@ -5,6 +5,7 @@ import LoginForm from "./components/auth/LoginForm";
 import SignUpForm from "./components/auth/SignUpForm";
 import ForgotPasswordForm from "./components/auth/ForgotPasswordForm";
 import ResetPasswordForm from "./components/auth/ResetPasswordForm";
+import AcceptInvitationForm from "./components/auth/AcceptInvitationForm";
 import Dashboard from "./components/pages/dashboard";
 import Success from "./components/pages/success";
 import Home from "./components/pages/home";
@@ -40,6 +41,7 @@ function AppRoutes() {
         <Route path="/signup" element={<SignUpForm />} />
         <Route path="/forgot-password" element={<ForgotPasswordForm />} />
         <Route path="/reset-password" element={<ResetPasswordForm />} />
+        <Route path="/accept-invitation" element={<AcceptInvitationForm />} />
         <Route
           path="/auth/callback"
           element={<LoadingScreen text="Processando autenticação..." />}
