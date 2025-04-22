@@ -134,11 +134,38 @@ export default function LandingPage() {
             </div>
             <div className="mt-12 relative">
               <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                <img
-                  src="https://images.unsplash.com/photo-1486299267070-83823f5448dd?w=1200&q=80"
-                  alt="Mapa de localização"
-                  className="w-full h-[400px] object-cover"
-                />
+                {/* MapBox will be integrated here in a future update */}
+                <div className="w-full h-[400px] bg-blue-50 flex items-center justify-center">
+                  <div className="text-center p-4">
+                    <p className="text-blue-600 font-medium mb-2">
+                      MapBox Configuration Ready
+                    </p>
+                    <p className="text-gray-600 text-sm">
+                      Token:{" "}
+                      {import.meta.env.VITE_MAPBOX_TOKEN
+                        ? "✓ Configured"
+                        : "✗ Missing"}
+                    </p>
+                    <p className="text-gray-600 text-sm">
+                      Style:{" "}
+                      {import.meta.env.VITE_MAPBOX_STYLE_URL
+                        ? "✓ Configured"
+                        : "✗ Missing"}
+                    </p>
+                    <p className="text-gray-600 text-sm">
+                      Center:{" "}
+                      {import.meta.env.VITE_MAPBOX_INITIAL_CENTER
+                        ? "✓ Configured"
+                        : "✗ Missing"}
+                    </p>
+                    <p className="text-gray-600 text-sm">
+                      Zoom:{" "}
+                      {import.meta.env.VITE_MAPBOX_INITIAL_ZOOM
+                        ? "✓ Configured"
+                        : "✗ Missing"}
+                    </p>
+                  </div>
+                </div>
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                   <div className="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center animate-pulse">
                     <MapPin className="h-8 w-8 text-white" />
