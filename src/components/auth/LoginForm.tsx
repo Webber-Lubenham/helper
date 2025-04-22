@@ -25,9 +25,17 @@ export default function LoginForm() {
     try {
       await signIn(email, password, rememberMe);
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      setError("Email ou senha inválidos");
+      if (error.status === 400) {
+        setError("Credenciais inválidas. Verifique seu email e senha.");
+      } else if (error.status === 429) {
+        setError("Muitas tentativas. Tente novamente mais tarde.");
+      } else if (error.message) {
+        setError(error.message);
+      } else {
+        setError("Erro ao fazer login. Tente novamente.");
+      }
     } finally {
       setIsLoading(false);
     }
